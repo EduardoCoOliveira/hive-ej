@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hï Tech Hub — Preview UI</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Inter', sans-serif; background: #F8F9FC; color: #1D1D1B; }
+
+  /* ── Cores da marca ── */
+  :root {
+    --navy: #09254D; --navy-light: #1C2949;
+    --teal: #41C5C6; --teal-light: #4EBBC0;
+    --purple: #4E378C; --yellow: #FEC045;
+    --cream: #F1EDEC; --gray: #A2A1A1;
+    --border: #E4E7ED; --muted: #6B7280;
+    --card: #FFFFFF;
+  }
+
+  /* ── Layout principal ── */
+  .app { display: flex; height: 100vh; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 260px; flex-shrink: 0;
+    background: var(--card); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+  }
+  .sidebar-logo { padding: 20px 16px; border-bottom: 1px solid var(--border); }
+  .sidebar-logo .logo-text { font-size: 20px; font-weight: 800; color: var(--navy); letter-spacing: -0.5px; }
+  .sidebar-logo .logo-text span { color: var(--teal); }
+
+  .org-card {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .org-avatar {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--navy), var(--purple));
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 14px;
+  }
+  .org-name { font-size: 13px; font-weight: 600; color: #1D1D1B; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600;
+  }
+  .badge-internal { background: rgba(65,197,198,.15); color: #0e8b8c; }
+  .badge-premium  { background: rgba(254,192,69,.15);  color: #b07d00; }
+  .badge-free     { background: #F3F4F6; color: #6B7280; }
+
+  nav { flex: 1; padding: 12px; overflow-y: auto; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 12px;
+    font-size: 13.5px; font-weight: 500; color: var(--muted);
+    cursor: pointer; transition: all .15s; position: relative;
+    margin-bottom: 2px; text-decoration: none;
+  }
+  .nav-item:hover { background: #F3F4F6; color: #1D1D1B; }
+  .nav-item.active { background: rgba(65,197,198,.1); color: var(--teal); }
+  .nav-item.active::before {
+    content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 20px; background: var(--teal); border-radius: 0 4px 4px 0;
+  }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-lock { margin-left: auto; opacity: .4; font-size: 11px; }
+
+  .sidebar-footer { border-top: 1px solid var(--border); padding: 12px; }
+  .user-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px;
+  }
+  .user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--navy), var(--purple));
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 13px; font-weight: 700;
+  }
+  .user-name { font-size: 13px; font-weight: 500; color: #1D1D1B; }
+
+  /* ── Main content ── */
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px; border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,.8); backdrop-filter: blur(8px);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar-title { font-size: 17px; font-weight: 700; color: #1D1D1B; }
+  .topbar-sub   { font-size: 13px; color: var(--muted); margin-top: 1px; }
+  .topbar-actions { display: flex; align-items: center; gap: 10px; }
+  .btn-upgrade {
+    padding: 6px 14px; border-radius: 10px; font-size: 12px; font-weight: 700;
+    color: white; background: linear-gradient(135deg, var(--navy), var(--purple));
+    border: none; cursor: pointer; text-decoration: none;
+  }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border);
+    background: white; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; cursor: pointer; position: relative;
+  }
+  .notif-dot {
+    position: absolute; top: 7px; right: 7px;
+    width: 7px; height: 7px; border-radius: 50%; background: var(--teal);
+  }
+
+  /* ── Content ── */
+  .content { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* Banner */
+  .upgrade-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-radius: 16px;
+    border: 1px solid rgba(78,55,140,.25); background: rgba(78,55,140,.05);
+  }
+  .banner-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--purple), var(--navy));
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .banner-title { font-size: 13px; font-weight: 700; color: #1D1D1B; }
+  .banner-desc  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* KPI grid */
+  .section-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .kpi-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .kpi-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+  .kpi-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .kpi-icon.teal   { background: rgba(65,197,198,.15); }
+  .kpi-icon.navy   { background: rgba(9,37,77,.08); }
+  .kpi-icon.yellow { background: rgba(254,192,69,.15); }
+  .kpi-icon.purple { background: rgba(78,55,140,.1); }
+  .kpi-trend { font-size: 11px; font-weight: 700; color: var(--teal); }
+  .kpi-value { font-size: 22px; font-weight: 800; color: #1D1D1B; }
+  .kpi-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Bottom row */
+  .bottom-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .card-title { font-size: 14px; font-weight: 700; color: #1D1D1B; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .card-title a { font-size: 12px; color: var(--teal); font-weight: 500; }
+
+  .project-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-radius: 10px; margin-bottom: 4px;
+    transition: background .1s; cursor: pointer;
+  }
+  .project-row:hover { background: #F8F9FC; }
+  .project-info { display: flex; align-items: center; gap: 10px; }
+  .project-dot { width: 28px; height: 28px; border-radius: 8px; background: #EEF2FF; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .project-name { font-size: 13px; font-weight: 600; color: #1D1D1B; }
+  .project-client { font-size: 11px; color: var(--muted); }
+  .status-pill {
+    padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600;
+  }
+  .status-active { background: rgba(65,197,198,.15); color: #0e8b8c; }
+  .status-proposal { background: rgba(59,130,246,.12); color: #2563eb; }
+  .status-negotiation { background: rgba(254,192,69,.2); color: #b07d00; }
+
+  /* Quick actions */
+  .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .action-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 12px 8px; border-radius: 12px; border: 1px solid var(--border);
+    cursor: pointer; transition: all .15s; text-align: center;
+  }
+  .action-btn:hover { border-color: var(--teal); background: rgba(65,197,198,.05); }
+  .action-btn.locked { opacity: .4; cursor: default; }
+  .action-btn span:first-child { font-size: 20px; }
+  .action-label { font-size: 11px; font-weight: 600; color: #1D1D1B; }
+
+  /* Integrations */
+  .int-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }
+  .int-name { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .int-status-on  { font-size: 11px; font-weight: 600; color: var(--teal); display: flex; align-items: center; gap: 4px; }
+  .int-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+  .int-connect    { font-size: 11px; color: var(--muted); cursor: pointer; }
+  .int-connect:hover { color: var(--teal); }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">Hï<span>Tech</span> Hub</div>
+    </div>
+    <div class="org-card">
+      <div class="org-avatar">H</div>
+      <div>
+        <div class="org-name">Hï Tech EJ</div>
+        <span class="badge badge-internal">✦ Internal</span>
+      </div>
+    </div>
+    <nav>
+      <a class="nav-item active" href="#">
+        <span class="nav-icon">🏠</span> Dashboard
+      </a>
+      <a class="nav-item" href="#">
+        <span class="nav-icon">📁</span> Projetos
+      </a>
+      <a class="nav-item" href="#">
+        <span class="nav-icon">👥</span> Competências
+      </a>
+      <a class="nav-item" href="#">
+        <span class="nav-icon">💰</span> Financeiro
+      </a>
+      <a class="nav-item" href="#">
+        <span class="nav-icon">📚</span> Wiki de Bastão
+      </a>
+      <a class="nav-item" href="#">
+        <span class="nav-icon">📄</span> Documentos
+      </a>
+      <a class="nav-item" href="#">
+        <span class="nav-icon">🔗</span> Integrações
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a class="nav-item" href="#"><span class="nav-icon">⚙️</span> Configurações</a>
+      <div class="user-row">
+        <div class="user-avatar">E</div>
+        <div class="user-name">Eduardo</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Dashboard</div>
+        <div class="topbar-sub">Olá, Eduardo 👋</div>
+      </div>
+      <div class="topbar-actions">
+        <div class="icon-btn">🔔<span class="notif-dot"></span></div>
+        <div class="user-avatar" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#09254D,#4E378C);color:white;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">E</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- KPIs -->
+      <div>
+        <div class="section-label">Indicadores do Mês</div>
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon teal">💰</div>
+              <span class="kpi-trend">↑ 8,2%</span>
+            </div>
+            <div class="kpi-value">R$ 42.800</div>
+            <div class="kpi-label">Faturamento</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon navy">📁</div>
+              <span class="kpi-trend" style="color:#2563eb">↑ 2</span>
+            </div>
+            <div class="kpi-value">7</div>
+            <div class="kpi-label">Projetos Ativos</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon yellow">⭐</div>
+              <span class="kpi-trend" style="color:#b07d00">↑ 0,5pts</span>
+            </div>
+            <div class="kpi-value">8,9/10</div>
+            <div class="kpi-label">NPS Médio</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon purple">👥</div>
+            </div>
+            <div class="kpi-value">23</div>
+            <div class="kpi-label">Membros Ativos</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom row -->
+      <div class="bottom-row">
+        <!-- Projetos recentes (2 colunas) -->
+        <div class="card" style="grid-column: span 2">
+          <div class="card-title">
+            Projetos Recentes <a href="#">Ver todos →</a>
+          </div>
+          <div class="project-row">
+            <div class="project-info">
+              <div class="project-dot">📋</div>
+              <div>
+                <div class="project-name">Sistema de Gestão Escolar</div>
+                <div class="project-client">Escola Estadual João XXIII</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="status-pill status-active">Ativo</span>
+              <span style="font-size:13px;font-weight:700;color:#1D1D1B">R$ 8.500</span>
+            </div>
+          </div>
+          <div class="project-row">
+            <div class="project-info">
+              <div class="project-dot">📋</div>
+              <div>
+                <div class="project-name">Consultoria de Marketing Digital</div>
+                <div class="project-client">Padaria Bom Sabor Ltda</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="status-pill status-negotiation">Negociação</span>
+              <span style="font-size:13px;font-weight:700;color:#1D1D1B">R$ 5.200</span>
+            </div>
+          </div>
+          <div class="project-row">
+            <div class="project-info">
+              <div class="project-dot">📋</div>
+              <div>
+                <div class="project-name">App de Delivery Local</div>
+                <div class="project-client">Restaurante Sabor Mineiro</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="status-pill status-proposal">Proposta</span>
+              <span style="font-size:13px;font-weight:700;color:#1D1D1B">R$ 12.000</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coluna lateral -->
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <!-- Ações rápidas -->
+          <div class="card" style="padding:16px">
+            <div class="card-title" style="margin-bottom:10px">Ações Rápidas</div>
+            <div class="actions-grid">
+              <div class="action-btn"><span>📁</span><span class="action-label">Novo Projeto</span></div>
+              <div class="action-btn"><span>📝</span><span class="action-label">Nova Wiki</span></div>
+              <div class="action-btn"><span>📄</span><span class="action-label">Gerar Contrato</span></div>
+              <div class="action-btn"><span>🧠</span><span class="action-label">Sugerir Consultor</span></div>
+            </div>
+          </div>
+
+          <!-- Integrações -->
+          <div class="card" style="padding:16px">
+            <div class="card-title" style="margin-bottom:10px">Integrações <a href="#">Gerenciar</a></div>
+            <div class="int-row">
+              <span class="int-name">🔵 Google</span>
+              <span class="int-status-on"><span class="int-dot"></span> Ativo</span>
+            </div>
+            <div class="int-row">
+              <span class="int-name">🟣 ClickUp</span>
+              <span class="int-status-on"><span class="int-dot"></span> Ativo</span>
+            </div>
+            <div class="int-row">
+              <span class="int-name">⬛ Notion</span>
+              <span class="int-connect">Conectar</span>
+            </div>
+            <div class="int-row">
+              <span class="int-name">🟦 Discord</span>
+              <span class="int-connect">Conectar</span>
+            </div>
+            <div class="int-row">
+              <span class="int-name">🎨 Canva</span>
+              <span class="int-connect">Conectar</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

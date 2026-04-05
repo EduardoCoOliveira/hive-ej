@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────
+   Hï Tech Hub — Global Styles & Design Tokens
+   Identidade Visual: Azul Navy + Teal + Roxo
+   ───────────────────────────────────────────── */
+
+@layer base {
+  :root {
+    /* shadcn/ui tokens mapeados para a IDV Hï Tech */
+    --background: 240 30% 98%;        /* branco levemente frio */
+    --foreground: 220 60% 10%;        /* #09254D navy escuro */
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 60% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 60% 10%;
+
+    --primary: 186 52% 52%;           /* #41C5C6 teal */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217 73% 18%;         /* #09254D navy */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 20% 95%;
+    --muted-foreground: 220 15% 45%;
+
+    --accent: 45 98% 63%;             /* #FEC045 amarelo */
+    --accent-foreground: 220 60% 10%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 186 52% 52%;
+
+    --radius: 0.6rem;
+
+    /* Sidebar */
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 72px;
+  }
+
+  .dark {
+    --background: 217 73% 8%;
+    --foreground: 0 0% 96%;
+
+    --card: 217 60% 12%;
+    --card-foreground: 0 0% 96%;
+
+    --popover: 217 60% 12%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 186 52% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217 30% 20%;
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 217 30% 16%;
+    --muted-foreground: 220 15% 60%;
+
+    --accent: 45 98% 63%;
+    --accent-foreground: 220 60% 10%;
+
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 217 30% 20%;
+    --input: 217 30% 20%;
+    --ring: 186 52% 52%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Scrollbar customizada */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: #41C5C6;
+    border-radius: 9999px;
+  }
+
+  /* Seleção de texto */
+  ::selection {
+    background-color: rgba(65, 197, 198, 0.2);
+    color: #09254D;
+  }
+}
+
+@layer components {
+  /* Gradiente padrão da marca */
+  .bg-brand-gradient {
+    background: linear-gradient(135deg, #09254D 0%, #1C2949 60%, #4E378C 100%);
+  }
+
+  .bg-teal-gradient {
+    background: linear-gradient(135deg, #41C5C6 0%, #4EBBC0 100%);
+  }
+
+  /* Alias for Tailwind backgroundImage token */
+  .bg-gradient-brand {
+    background: linear-gradient(135deg, #09254D 0%, #1C2949 50%, #4E378C 100%);
+  }
+
+  /* Card com borda sutil teal */
+  .card-brand {
+    @apply bg-card rounded-xl border border-border shadow-sm
+           transition-shadow hover:shadow-md;
+  }
+
+  /* Badge de plano */
+  .badge-premium {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold
+           bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400;
+  }
+  .badge-free {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold
+           bg-muted text-muted-foreground;
+  }
+  .badge-internal {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold
+           bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400;
+  }
+}
