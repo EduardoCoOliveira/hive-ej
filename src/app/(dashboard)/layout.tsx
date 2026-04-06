@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/Sidebar";
 
+// All dashboard pages are dynamic — they check auth via cookies on every request
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {
