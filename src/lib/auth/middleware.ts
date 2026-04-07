@@ -10,7 +10,9 @@ import type { Database } from "@/lib/supabase/database.types";
 const PUBLIC_ROUTES = ["/", "/login", "/register", "/api/webhooks"];
 
 // Rotas apenas para usuários não autenticados
-const AUTH_ONLY_ROUTES = ["/login", "/register"];
+// Nota: /register NÃO entra aqui — usuário pode estar logado e ainda precisar
+// completar o cadastro da organização (sem perfil no banco ainda)
+const AUTH_ONLY_ROUTES = ["/login"];
 
 export async function authMiddleware(request: NextRequest) {
   const response = NextResponse.next({
