@@ -17,7 +17,11 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  // Sessão inválida ou expirada → limpa cookies para evitar redirect loop
+  if (!user) {
+    await supabase.auth.signOut();
+    redirect("/login");
+  }
 
   // Busca perfil + organização
   const { data: profile } = await supabase
