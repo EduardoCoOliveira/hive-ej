@@ -35,7 +35,8 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .single();
 
-  if (!profile) redirect("/login");
+  // Sem perfil = novo usuário sem organização cadastrada → envia para registro
+  if (!profile) redirect("/register");
 
   const org = Array.isArray(profile.organization)
     ? profile.organization[0]
