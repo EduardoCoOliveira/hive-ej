@@ -4,52 +4,52 @@ import { createServerClient } from "@/lib/supabase/server";
 /**
  * GET /api/auth/callback/magic
  *
- * Callback do Magic Link (OTP por e-mail) — Supabase PKCE flow.
+ * Callback do Magic Link — suporta dois fluxos do Supabase:
  *
- * O Supabase envia o e-mail com um link para esta rota contendo:
- *   ?token_hash=...  → hash do token OTP
- *   ?type=email      → tipo de verificação
- *   ?next=...        → rota para redirecionar após login (nosso parâmetro)
+ * 1. PKCE flow (padrão do createClientComponentClient):
+ *    ?code=...   → exchangeCodeForSession
  *
- * IMPORTANTE: Esta URL deve estar na whitelist do Supabase Dashboard em:
- *   Authentication > URL Configuration > Redirect URLs
- *   Adicione: http://localhost:3000/api/auth/callback/magic
- *             https://seudominio.com/api/auth/callback/magic
+ * 2. OTP hash flow (legado):
+ *    ?token_hash=...&type=email → verifyOtp
+ *
+ * ?next=...  → rota para redirecionar após login (nosso parâmetro)
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
 
+  const code      = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type      = searchParams.get("type") as "email" | "recovery" | "invite" | null;
   const next      = searchParams.get("next") ?? "/dashboard";
-
-  // Parâmetros obrigatórios
-  if (!tokenHash || !type) {
-    console.error("[auth/callback/magic] Missing token_hash or type params");
-    return NextResponse.redirect(`${origin}/login?error=invalid_link`);
-  }
+  const safeNext  = next.startsWith("/") ? next : "/dashboard";
 
   const supabase = createServerClient();
 
-  // Verifica o OTP e cria a sessão
-  const { error } = await supabase.auth.verifyOtp({
-    token_hash: tokenHash,
-    type,
-  });
+  // ── PKCE flow (code) ─────────────────────────────────────────
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-  if (error) {
-    console.error("[auth/callback/magic] verifyOtp error:", error.message);
+    if (error) {
+      console.error("[auth/callback/magic] exchangeCodeForSession error:", error.message);
+      return NextResponse.redirect(`${origin}/login?error=invalid_link`);
+    }
 
-    const isExpired = error.message.toLowerCase().includes("expired") ||
-                      error.message.toLowerCase().includes("invalid");
-
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(isExpired ? "invalid_link" : error.message)}`
-    );
+    return NextResponse.redirect(`${origin}${safeNext}`);
   }
 
-  // Garante que next aponta para o próprio domínio (evita open redirect)
-  const safeNext = next.startsWith("/") ? next : "/dashboard";
+  // ── OTP hash flow (token_hash) ────────────────────────────────
+  if (tokenHash && type) {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
 
-  return NextResponse.redirect(`${origin}${safeNext}`);
+    if (error) {
+      console.error("[auth/callback/magic] verifyOtp error:", error.message);
+      return NextResponse.redirect(`${origin}/login?error=invalid_link`);
+    }
+
+    return NextResponse.redirect(`${origin}${safeNext}`);
+  }
+
+  // Nenhum parâmetro válido encontrado
+  console.error("[auth/callback/magic] Missing code or token_hash params", Object.fromEntries(searchParams));
+  return NextResponse.redirect(`${origin}/login?error=invalid_link`);
 }

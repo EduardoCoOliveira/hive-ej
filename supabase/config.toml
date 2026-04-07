@@ -1,0 +1,3 @@
+[auth]
+site_url = "https://hitech-hub.vercel.app"
+additional_redirect_urls = ["https://hitech-hub.vercel.app/**", "http://localhost:3000/**"]
