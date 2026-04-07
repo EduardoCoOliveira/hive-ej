@@ -29,7 +29,7 @@ export default async function DashboardLayout({
     .select(`
       full_name,
       avatar_url,
-      role,
+      rank,
       organization:organizations (
         id,
         name,
