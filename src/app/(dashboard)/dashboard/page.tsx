@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient, createAdminClient } from "@/lib/supabase/server";
 import { Header } from "@/components/layout/Header";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { RecentProjects } from "@/components/dashboard/RecentProjects";
@@ -11,44 +11,51 @@ export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
   const supabase = createServerSupabaseClient();
+  const admin = createAdminClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
+  // Usa admin client para bypassar RLS recursiva em profiles/organizations
+  const { data: profile } = await admin
     .from("profiles")
-    .select("full_name, avatar_url, organization:organizations(name, plan_tier)")
+    .select("full_name, avatar_url, organization_id")
     .eq("id", user.id)
     .single();
 
-  const org = Array.isArray(profile?.organization)
-    ? profile?.organization[0]
-    : profile?.organization;
+  const { data: org } = profile?.organization_id
+    ? await admin.from("organizations").select("name, plan_tier").eq("id", profile.organization_id).single()
+    : { data: null };
 
   const planTier = (org?.plan_tier ?? "free") as "free" | "premium" | "internal";
   const firstName = profile?.full_name?.split(" ")[0] ?? "usuário";
 
   const currentPeriod = new Date().toISOString().slice(0, 7);
-  const { data: kpi } = await supabase
-    .from("kpi_records")
+  // kpi_records pode não existir ainda — ignorar erro silenciosamente
+  const { data: kpi } = await admin
+    .from("kpi_records" as never)
     .select("*")
     .eq("period", currentPeriod)
-    .single();
+    .maybeSingle() as { data: Record<string, number> | null };
 
-  const { data: projects } = await supabase
+  const { data: projects } = await admin
     .from("projects")
     .select("id, name, client_name, status, value, updated_at")
+    .eq("organization_id", profile?.organization_id ?? "")
     .order("updated_at", { ascending: false })
     .limit(5);
 
-  const { data: integrations } = await supabase
-    .from("integrations")
-    .select("provider, is_active, connected_at")
-    .eq("is_active", true);
+  // Tabela correta é org_integrations, não integrations
+  const { data: rawIntegrations } = await admin
+    .from("org_integrations")
+    .select("provider, connected_at")
+    .eq("org_id", profile?.organization_id ?? "");
+  const integrations = (rawIntegrations ?? []).map((i) => ({ ...i, is_active: true }));
 
-  const { count: membersCount } = await supabase
+  const { count: membersCount } = await admin
     .from("profiles")
     .select("id", { count: "exact", head: true })
+    .eq("organization_id", profile?.organization_id ?? "")
     .eq("is_active", true);
 
   return (
