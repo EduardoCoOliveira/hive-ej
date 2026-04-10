@@ -7,6 +7,7 @@ import { IntegrationStatus } from "@/components/dashboard/IntegrationStatus";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { Sparkles, ArrowRight } from "lucide-react";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
@@ -30,13 +31,8 @@ export default async function DashboardPage() {
   const planTier = (org?.plan_tier ?? "free") as "free" | "premium" | "internal";
   const firstName = profile?.full_name?.split(" ")[0] ?? "usuário";
 
-  const currentPeriod = new Date().toISOString().slice(0, 7);
-  // kpi_records pode não existir ainda — ignorar erro silenciosamente
-  const { data: kpi } = await admin
-    .from("kpi_records" as never)
-    .select("*")
-    .eq("period", currentPeriod)
-    .maybeSingle() as { data: Record<string, number> | null };
+  // kpi_records pode não existir — silenciosamente retorna null
+  const kpi: Record<string, number> | null = null;
 
   const { data: projects } = await admin
     .from("projects")
