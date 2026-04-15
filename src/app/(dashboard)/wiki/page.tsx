@@ -1,12 +1,22 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient, createAdminClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Header } from "@/components/layout/Header";
-import { BookMarked, Search, Plus, FileText, Lock } from "lucide-react";
+import { BookMarked, Search, Plus, Lock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Wiki de Bastão" };
 
-// Artigos de exemplo para quando o wiki estiver vazio
+type WikiProfile = {
+  full_name: string;
+  avatar_url: string | null;
+  organization_id: string;
+};
+
+type WikiOrg = {
+  name: string;
+  plan_tier: "free" | "premium" | "internal";
+};
+
 const STARTER_ARTICLES = [
   { icon: "🚀", title: "Como fazer um bom kickoff", category: "Projetos", locked: false },
   { icon: "📋", title: "Template de proposta comercial", category: "Vendas", locked: false },
@@ -18,37 +28,42 @@ const STARTER_ARTICLES = [
 
 export default async function WikiPage() {
   const supabase = createServerSupabaseClient();
-  const admin = createAdminClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await admin
+  const profileResult = await supabase
     .from("profiles")
     .select("full_name, avatar_url, organization_id")
     .eq("id", user.id)
     .single();
+  const profile = profileResult.data as WikiProfile | null;
 
-  const { data: org } = profile?.organization_id
-    ? await admin.from("organizations").select("name, plan_tier").eq("id", profile.organization_id).single()
-    : { data: null };
+  if (!profile) redirect("/register");
 
-  const planTier = (org?.plan_tier ?? "free") as "free" | "premium" | "internal";
+  const orgResult = await supabase
+    .from("organizations")
+    .select("name, plan_tier")
+    .eq("id", profile.organization_id)
+    .single();
+  const org = orgResult.data as WikiOrg | null;
+
+  const planTier = org?.plan_tier ?? "free";
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <Header
         title="Wiki de Bastão"
         subtitle="Conhecimento institucional da sua EJ"
-        userName={profile?.full_name ?? ""}
+        userName={profile.full_name}
         userEmail={user.email ?? ""}
         planTier={planTier}
       />
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-6 space-y-6 max-w-5xl mx-auto w-full">
-
-          {/* Barra de busca + botão novo */}
           <div className="flex gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -67,15 +82,14 @@ export default async function WikiPage() {
             </button>
           </div>
 
-          {/* Grid de artigos */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
               Artigos sugeridos para começar
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {STARTER_ARTICLES.map((article, i) => (
+              {STARTER_ARTICLES.map((article, index) => (
                 <div
-                  key={i}
+                  key={index}
                   className={`relative bg-card border border-border rounded-2xl p-5 space-y-3 transition-colors ${
                     article.locked ? "opacity-60" : "hover:border-brand-teal/40 cursor-pointer"
                   }`}
@@ -97,7 +111,6 @@ export default async function WikiPage() {
             </div>
           </div>
 
-          {/* Banner de construção */}
           <div className="flex items-start gap-4 p-5 rounded-2xl border border-brand-purple/20 bg-brand-purple/5">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand-purple/10">
               <BookMarked className="w-5 h-5 text-brand-purple" />
@@ -110,7 +123,6 @@ export default async function WikiPage() {
               </p>
             </div>
           </div>
-
         </div>
       </div>
     </div>

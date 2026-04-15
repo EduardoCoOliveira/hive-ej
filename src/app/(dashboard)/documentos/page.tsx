@@ -1,10 +1,21 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient, createAdminClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Header } from "@/components/layout/Header";
 import { FileText, Sparkles, Plus, FileSignature, ScrollText, Briefcase } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Documentos" };
+
+type DocumentsProfile = {
+  full_name: string;
+  avatar_url: string | null;
+  organization_id: string;
+};
+
+type DocumentsOrg = {
+  name: string;
+  plan_tier: "free" | "premium" | "internal";
+};
 
 const DOC_TEMPLATES = [
   {
@@ -35,22 +46,29 @@ const DOC_TEMPLATES = [
 
 export default async function DocumentosPage() {
   const supabase = createServerSupabaseClient();
-  const admin = createAdminClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await admin
+  const profileResult = await supabase
     .from("profiles")
     .select("full_name, avatar_url, organization_id")
     .eq("id", user.id)
     .single();
+  const profile = profileResult.data as DocumentsProfile | null;
 
-  const { data: org } = profile?.organization_id
-    ? await admin.from("organizations").select("name, plan_tier").eq("id", profile.organization_id).single()
-    : { data: null };
+  if (!profile) redirect("/register");
 
-  const planTier = (org?.plan_tier ?? "free") as "free" | "premium" | "internal";
+  const orgResult = await supabase
+    .from("organizations")
+    .select("name, plan_tier")
+    .eq("id", profile.organization_id)
+    .single();
+  const org = orgResult.data as DocumentsOrg | null;
+
+  const planTier = org?.plan_tier ?? "free";
   const isPremium = planTier !== "free";
 
   return (
@@ -58,20 +76,20 @@ export default async function DocumentosPage() {
       <Header
         title="Documentos"
         subtitle="Geração automática de contratos e documentos"
-        userName={profile?.full_name ?? ""}
+        userName={profile.full_name}
         userEmail={user.email ?? ""}
         planTier={planTier}
       />
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-6 space-y-6 max-w-5xl mx-auto w-full">
-
-          {/* Banner Premium (só para free) */}
           {!isPremium && (
             <div className="relative overflow-hidden flex items-center justify-between p-5 rounded-2xl border border-brand-purple/25 bg-gradient-to-r from-brand-navy/5 via-brand-purple/5 to-brand-teal/5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, #4E378C, #09254D)" }}>
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: "linear-gradient(135deg, #4E378C, #09254D)" }}
+                >
                   <Sparkles className="w-5 h-5 text-yellow-400" />
                 </div>
                 <div>
@@ -91,16 +109,13 @@ export default async function DocumentosPage() {
             </div>
           )}
 
-          {/* Templates */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
                 Templates Disponíveis
               </p>
               {isPremium && (
-                <button
-                  className="flex items-center gap-1.5 text-xs font-medium text-brand-teal hover:underline"
-                >
+                <button className="flex items-center gap-1.5 text-xs font-medium text-brand-teal hover:underline">
                   <Plus className="w-3.5 h-3.5" />
                   Novo documento
                 </button>
@@ -108,9 +123,9 @@ export default async function DocumentosPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {DOC_TEMPLATES.map((tpl, i) => (
+              {DOC_TEMPLATES.map((template, index) => (
                 <div
-                  key={i}
+                  key={index}
                   className={`relative bg-card border border-border rounded-2xl p-5 flex items-start gap-4 transition-colors ${
                     isPremium
                       ? "hover:border-brand-teal/40 cursor-pointer"
@@ -119,20 +134,19 @@ export default async function DocumentosPage() {
                 >
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-white"
-                    style={{ background: tpl.color }}
+                    style={{ background: template.color }}
                   >
-                    {tpl.icon}
+                    {template.icon}
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground text-sm">{tpl.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{tpl.desc}</p>
+                    <p className="font-semibold text-foreground text-sm">{template.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{template.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Documentos gerados (vazio por enquanto) */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
               Documentos Gerados
@@ -149,7 +163,6 @@ export default async function DocumentosPage() {
               </p>
             </div>
           </div>
-
         </div>
       </div>
     </div>

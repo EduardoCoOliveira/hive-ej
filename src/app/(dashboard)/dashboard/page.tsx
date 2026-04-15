@@ -1,85 +1,179 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient, createAdminClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Header } from "@/components/layout/Header";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { RecentProjects } from "@/components/dashboard/RecentProjects";
 import { IntegrationStatus } from "@/components/dashboard/IntegrationStatus";
 import { QuickActions } from "@/components/dashboard/QuickActions";
+import type { Database } from "@/lib/supabase/database.types";
 import { Sparkles, ArrowRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard" };
 
+type DashboardProfile = {
+  full_name: string;
+  avatar_url: string | null;
+  organization_id: string;
+};
+
+type DashboardOrg = {
+  name: string;
+  plan_tier: "free" | "premium" | "internal";
+};
+
+type DashboardProject = {
+  id: string;
+  name: string;
+  client_name: string;
+  status: Database["public"]["Enums"]["project_status"];
+  value: number;
+  updated_at: string;
+};
+
+type DashboardIntegration = {
+  provider: Database["public"]["Enums"]["integration_provider"];
+  is_active: boolean;
+  connected_at: string;
+};
+
+type DashboardProjectRow = {
+  id: string;
+  name: string;
+  client_name: string;
+  status: Database["public"]["Enums"]["project_status"];
+  value: number | null;
+  updated_at: string;
+};
+
+type DashboardIntegrationRow = {
+  provider: string;
+  connected_at: string;
+};
+
+const SUPPORTED_INTEGRATION_PROVIDERS = new Set<Database["public"]["Enums"]["integration_provider"]>([
+  "google",
+  "clickup",
+  "notion",
+  "discord",
+  "canva",
+  "figma",
+]);
+
+function getKpiSnapshot(): {
+  revenue?: number;
+  projects_count?: number;
+  nps_average?: number;
+} | null {
+  // kpi_records ainda nao esta disponivel em todos os ambientes.
+  return null;
+}
+
 export default async function DashboardPage() {
   const supabase = createServerSupabaseClient();
-  const admin = createAdminClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Usa admin client para bypassar RLS recursiva em profiles/organizations
-  const { data: profile } = await admin
+  const profileResult = await supabase
     .from("profiles")
     .select("full_name, avatar_url, organization_id")
     .eq("id", user.id)
     .single();
+  const profile = profileResult.data as DashboardProfile | null;
 
-  const { data: org } = profile?.organization_id
-    ? await admin.from("organizations").select("name, plan_tier").eq("id", profile.organization_id).single()
-    : { data: null };
+  if (!profile) redirect("/register");
 
-  const planTier = (org?.plan_tier ?? "free") as "free" | "premium" | "internal";
-  const firstName = profile?.full_name?.split(" ")[0] ?? "usuário";
+  const orgResult = await supabase
+    .from("organizations")
+    .select("name, plan_tier")
+    .eq("id", profile.organization_id)
+    .single();
+  const org = orgResult.data as DashboardOrg | null;
 
-  // kpi_records pode não existir — silenciosamente retorna null
-  const kpi: Record<string, number> | null = null;
+  const [projectsResult, integrationsResult, membersCountResult] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, name, client_name, status, value, updated_at")
+      .eq("organization_id", profile.organization_id)
+      .order("updated_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("org_integrations")
+      .select("provider, connected_at")
+      .eq("org_id", profile.organization_id),
+    supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", profile.organization_id)
+      .eq("is_active", true),
+  ]);
 
-  const { data: projects } = await admin
-    .from("projects")
-    .select("id, name, client_name, status, value, updated_at")
-    .eq("organization_id", profile?.organization_id ?? "")
-    .order("updated_at", { ascending: false })
-    .limit(5);
+  const planTier = org?.plan_tier ?? "free";
+  const firstName = profile.full_name.split(" ")[0] ?? "usuario";
 
-  // Tabela correta é org_integrations, não integrations
-  const { data: rawIntegrations } = await admin
-    .from("org_integrations")
-    .select("provider, connected_at")
-    .eq("org_id", profile?.organization_id ?? "");
-  const integrations = (rawIntegrations ?? []).map((i) => ({ ...i, is_active: true }));
+  const kpi = getKpiSnapshot();
 
-  const { count: membersCount } = await admin
-    .from("profiles")
-    .select("id", { count: "exact", head: true })
-    .eq("organization_id", profile?.organization_id ?? "")
-    .eq("is_active", true);
+  const rawProjects = (projectsResult.data ?? []) as DashboardProjectRow[];
+  const rawIntegrations = (integrationsResult.data ?? []) as DashboardIntegrationRow[];
+
+  const projects: DashboardProject[] = rawProjects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    client_name: project.client_name,
+    status: project.status,
+    value: project.value ?? 0,
+    updated_at: project.updated_at,
+  }));
+  const integrations: DashboardIntegration[] = rawIntegrations
+    .filter(
+      (
+        integration,
+      ): integration is {
+        provider: Database["public"]["Enums"]["integration_provider"];
+        connected_at: string;
+      } =>
+        SUPPORTED_INTEGRATION_PROVIDERS.has(
+          integration.provider as Database["public"]["Enums"]["integration_provider"],
+        ),
+    )
+    .map((integration) => ({
+      provider: integration.provider,
+      connected_at: integration.connected_at,
+      is_active: true,
+    }));
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <Header
         title="Dashboard"
         subtitle={`Bom dia, ${firstName}`}
-        userName={profile?.full_name ?? ""}
+        userName={profile.full_name}
         userEmail={user.email ?? ""}
         planTier={planTier}
       />
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-6 space-y-6 max-w-7xl mx-auto w-full">
-
-          {/* ── Upgrade banner (free plan) ── */}
           {planTier === "free" && (
-            <div className="relative overflow-hidden flex items-center justify-between
+            <div
+              className="relative overflow-hidden flex items-center justify-between
                             p-4 rounded-2xl border border-brand-purple/25
                             bg-gradient-to-r from-brand-navy/5 via-brand-purple/5 to-brand-teal/5
-                            dark:from-brand-navy/30 dark:via-brand-purple/20 dark:to-brand-teal/10">
-              {/* Decorative orb */}
-              <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full
-                              bg-brand-purple/10 dark:bg-brand-purple/20 blur-2xl pointer-events-none" />
+                            dark:from-brand-navy/30 dark:via-brand-purple/20 dark:to-brand-teal/10"
+            >
+              <div
+                className="absolute -right-8 -top-8 w-32 h-32 rounded-full
+                              bg-brand-purple/10 dark:bg-brand-purple/20 blur-2xl pointer-events-none"
+              />
 
               <div className="flex items-center gap-3 relative z-10">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: "linear-gradient(135deg, #4E378C, #09254D)" }}>
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: "linear-gradient(135deg, #4E378C, #09254D)" }}
+                >
                   <Sparkles className="w-5 h-5 text-brand-yellow" />
                 </div>
                 <div>
@@ -104,7 +198,6 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          {/* ── KPI grid ── */}
           <section>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
               Indicadores do Mês
@@ -135,24 +228,22 @@ export default async function DashboardPage() {
               />
               <KPICard
                 label="Membros Ativos"
-                value={membersCount?.toString() ?? "0"}
+                value={membersCountResult.count?.toString() ?? "0"}
                 icon="👥"
                 color="purple"
               />
             </div>
           </section>
 
-          {/* ── Main content: projects + sidebar ── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
-              <RecentProjects projects={projects ?? []} />
+              <RecentProjects projects={projects} />
             </div>
             <div className="space-y-4">
               <QuickActions planTier={planTier} />
-              <IntegrationStatus integrations={integrations ?? []} planTier={planTier} />
+              <IntegrationStatus integrations={integrations} planTier={planTier} />
             </div>
           </div>
-
         </div>
       </div>
     </div>

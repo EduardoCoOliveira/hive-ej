@@ -1,9 +1,22 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient, createAdminClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/Sidebar";
 
 // All dashboard pages are dynamic — they check auth via cookies on every request
 export const dynamic = "force-dynamic";
+
+type DashboardProfile = {
+  full_name: string;
+  avatar_url: string | null;
+  role: "owner" | "admin" | "member" | "viewer";
+  organization_id: string;
+};
+
+type DashboardOrg = {
+  id: string;
+  name: string;
+  plan_tier: "free" | "premium" | "internal";
+};
 
 export default async function DashboardLayout({
   children,
@@ -12,38 +25,33 @@ export default async function DashboardLayout({
 }) {
   const supabase = createServerSupabaseClient();
 
-  // Verifica sessão
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Sessão inválida ou expirada → limpa cookies para evitar redirect loop
   if (!user) {
     await supabase.auth.signOut();
     redirect("/login");
   }
 
-  // Busca perfil com admin client (bypassa RLS recursiva)
-  const admin = createAdminClient();
-
-  const { data: profile } = await admin
+  const profileResult = await supabase
     .from("profiles")
     .select("full_name, avatar_url, role, organization_id")
     .eq("id", user.id)
     .single();
+  const profile = profileResult.data as DashboardProfile | null;
 
-  // Sem perfil = novo usuário sem organização → envia para registro
   if (!profile) redirect("/register");
 
-  const { data: org } = await admin
+  const orgResult = await supabase
     .from("organizations")
     .select("id, name, plan_tier")
     .eq("id", profile.organization_id)
     .single();
+  const org = orgResult.data as DashboardOrg | null;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
       <Sidebar
         planTier={(org?.plan_tier as "free" | "premium" | "internal") ?? "free"}
         orgName={org?.name ?? "Minha EJ"}
@@ -51,7 +59,6 @@ export default async function DashboardLayout({
         userName={profile.full_name}
       />
 
-      {/* Conteúdo principal */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {children}
       </main>

@@ -2,8 +2,17 @@
  * GET /api/integracoes/connect?provider=discord|clickup|notion|google_workspace
  * Inicia o fluxo OAuth do provedor solicitado.
  */
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+const OAUTH_STATE_COOKIE = "hive_oauth_state";
+const ALLOWED_RANKS = new Set(["director", "president"]);
+
+interface ProfilePermissionRow {
+  rank: string;
+}
 
 const OAUTH_CONFIGS: Record<
   string,
@@ -56,6 +65,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Provider inválido" }, { status: 400 });
   }
 
+  const admin = createAdminClient();
+  const { data: profileRow } = await admin
+    .from("profiles")
+    .select("rank")
+    .eq("id", user.id)
+    .single();
+  const profile = profileRow as ProfilePermissionRow | null;
+
+  if (!profile || !ALLOWED_RANKS.has(profile.rank)) {
+    return NextResponse.redirect(new URL("/integracoes?error=forbidden", req.url));
+  }
+
   const config = OAUTH_CONFIGS[provider];
   const clientId = process.env[config.clientIdEnv];
   if (!clientId) {
@@ -68,8 +89,13 @@ export async function GET(req: NextRequest) {
   const origin = req.nextUrl.origin;
   const redirectUri = `${origin}${config.callbackPath}`;
 
-  // State = userId:provider (base64) for CSRF protection
-  const state = Buffer.from(`${user.id}:${provider}`).toString("base64url");
+  // State com nonce + vínculo do usuário para mitigar replay/CSRF.
+  const statePayload = {
+    userId: user.id,
+    provider,
+    nonce: randomUUID(),
+  };
+  const state = Buffer.from(JSON.stringify(statePayload)).toString("base64url");
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -94,8 +120,19 @@ export async function GET(req: NextRequest) {
 
   const authUrl =
     provider === "clickup"
-      ? `${config.authUrl}?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`
+      ? `${config.authUrl}?client_id=${clientId}&redirect_uri=${encodeURIComponent(
+          redirectUri
+        )}&state=${state}`
       : `${config.authUrl}?${params.toString()}`;
 
-  return NextResponse.redirect(authUrl);
+  const response = NextResponse.redirect(authUrl);
+  response.cookies.set(OAUTH_STATE_COOKIE, state, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 10,
+  });
+
+  return response;
 }
