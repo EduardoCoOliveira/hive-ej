@@ -1,137 +1,133 @@
-# Hï Tech Hub
+# Hïve
 
-> Hub de Gestão Centralizado para Empresas Juniores — desenvolvido pela Hï Tech
+Plataforma SaaS para ajudar Empresas Juniores brasileiras a centralizar a rotina de gestão em um só lugar: projetos, membros, financeiro, documentos, reuniões, pontos, competências, playbooks e integrações.
 
-## Visão Geral
+O Hïve nasceu para reduzir a dependência de planilhas soltas, Notion, WhatsApp e arquivos espalhados. A proposta é ser um painel único para a EJ acompanhar operação, liderança e histórico institucional sem perder contexto a cada troca de gestão.
 
-O **Hï Tech Hub** é um Micro-SaaS que unifica o fluxo de trabalho das Empresas Juniores (EJs) brasileiras em uma única plataforma. O sistema integra as ferramentas já utilizadas pelas EJs (Google Workspace, ClickUp, Notion, Discord, Canva, Figma) e adiciona módulos nativos exclusivos: Matriz de Competências, Wiki de Passagem de Bastão, Indicadores Brasil Júnior e Automação de Documentos.
+## Status do projeto
 
----
+Este projeto ainda está em desenvolvimento. A base de autenticação, dashboard, navegação principal e primeiras páginas já existem, mas alguns módulos ainda estão em fase de protótipo ou implementação gradual.
 
-## Stack Técnica
+O deploy atual roda na Vercel:
 
-| Camada | Tecnologia |
-|--------|-----------|
-| Frontend | Next.js 14 (App Router) + TypeScript |
-| Estilo | Tailwind CSS + shadcn/ui |
-| Backend | Next.js Route Handlers + Server Actions |
-| Banco de Dados | PostgreSQL via Supabase |
-| Auth | Supabase Auth (OAuth2 + Magic Link) |
-| Storage | Supabase Storage |
-| Pagamentos | Stripe |
-| PDF | jsPDF |
-| IA | OpenAI API (GPT-4o) |
-| State | Zustand + React Query |
+```txt
+https://hitech-hub.vercel.app
+```
 
----
+## Como o projeto foi desenvolvido
 
-## Módulos
+Este projeto foi desenvolvido por Eduardo Cordeiro de Oliveira com apoio do Codex como parceiro de programação.
 
-### Integrações (Hub)
-- **Google Workspace** — Docs (contratos), Sheets (financeiro), Drive, Calendar
-- **ClickUp / Trello / Notion** — Sincronização de tasks e bases de conhecimento
-- **Discord** — Notificações por webhook e gestão de cargos
-- **Canva / Figma** — Embedding de projetos e identidades visuais
+Na prática, eu uso o auxílio do Codex para acelerar a escrita e revisão de código em HTML, CSS, JavaScript/TypeScript e SQL. O Codex também ajuda na parte mais pesada e puxada do desenvolvimento, como estruturar fluxos de autenticação, revisar segurança, corrigir integração com Supabase, lidar com RLS, organizar migrations e investigar erros de deploy que seriam difíceis de resolver apenas com a minha experiência atual.
 
-### Nativos
-- **Matriz de Competências** — Algoritmo de alocação de consultores por habilidade e disponibilidade
-- **KPIs Brasil Júnior** — Dashboard automático de faturamento, NPS e indicadores MEJ
-- **Wiki de Bastão** — Documentação por cargo com histórico de tarefas e arquivos
-- **Automação de Documentos** — Geração de PDFs (contratos/propostas) a partir de formulários
+A ideia não é esconder o uso de IA, mas documentar o processo com transparência: o produto, as decisões e a direção do projeto são meus; a IA entra como apoio técnico para transformar as ideias em código funcional e aprender durante o caminho.
 
----
+## Stack
 
-## Planos e Preços
+| Área | Tecnologia |
+| --- | --- |
+| Frontend | Next.js 14, App Router, React, TypeScript |
+| Estilos | Tailwind CSS |
+| Backend | Route Handlers do Next.js |
+| Banco de dados | Supabase PostgreSQL |
+| Autenticação | Supabase Auth com magic link |
+| Hospedagem | Vercel |
+| Integrações planejadas | Google Workspace, Discord, Slack, Stripe, OpenAI |
 
-| Plano | Preço | Acesso |
-|-------|-------|--------|
-| **Free** | Grátis | Funcionalidades básicas |
-| **Premium** | R$ 50/mês por EJ | Todas as funcionalidades |
-| **Internal** | Gratuito vitalício | Usuários `@hitech.org.br` |
+## Funcionalidades
 
-> Regra de whitelist: qualquer usuário com e-mail `@hitech.org.br` recebe automaticamente o plano **Internal** (equivalente ao Premium, sem cobrança) no momento do cadastro.
+- Cadastro de EJ com magic link.
+- Criação automática de organização e perfil no primeiro login.
+- Dashboard protegido por autenticação.
+- Sidebar com rotas principais da plataforma.
+- Páginas iniciais para financeiro, wiki de bastão e documentos.
+- Estrutura de planos `free`, `premium` e `internal`.
+- Migrations do Supabase versionadas.
+- Políticas de RLS corrigidas com helpers `SECURITY DEFINER`.
+- Tipos do Supabase gerados a partir do banco real.
 
----
+## Estrutura
 
-## Instalação
+```txt
+hitech-hub/
+├── database/
+│   └── migrations/              # migrations SQL versionadas
+├── docs/                        # documentação técnica e notas de arquitetura
+├── public/                      # assets públicos
+├── src/
+│   ├── app/
+│   │   ├── (auth)/              # login e cadastro
+│   │   ├── (dashboard)/         # rotas protegidas da plataforma
+│   │   └── api/                 # route handlers
+│   ├── components/              # componentes de layout, dashboard e UI
+│   ├── lib/                     # clientes, integrações e utilitários
+│   ├── services/                # serviços de domínio e integrações
+│   └── types/                   # tipos compartilhados
+└── supabase/
+    └── migrations/              # migrations usadas pela Supabase CLI
+```
+
+## Configuração local
+
+Clone o projeto:
 
 ```bash
-# 1. Clone o repositório
-git clone https://github.com/hitech/hitech-hub.git
-cd hitech-hub
+git clone https://github.com/EduardoCoOliveira/hive-ej.git
+cd hive-ej
+```
 
-# 2. Instale as dependências
+Instale as dependências:
+
+```bash
 npm install
+```
 
-# 3. Configure as variáveis de ambiente
-cp .env.example .env.local
-# Preencha os valores em .env.local
+Crie um arquivo `.env.local` com as variáveis necessárias:
 
-# 4. Execute as migrations no Supabase
-# Acesse o Supabase Dashboard > SQL Editor e execute:
-# database/migrations/001_initial_schema.sql
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+```
 
-# 5. Inicie o servidor de desenvolvimento
+Rode o projeto:
+
+```bash
 npm run dev
 ```
 
----
+Abra:
 
-## Estrutura de Pastas
-
-```
-hitech-hub/
-├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── (auth)/             # Grupo de rotas de autenticação
-│   │   ├── (dashboard)/        # Grupo de rotas protegidas
-│   │   └── api/                # Route Handlers
-│   ├── components/
-│   │   ├── ui/                 # shadcn/ui primitivos
-│   │   ├── layout/             # Sidebar, Header, Nav
-│   │   ├── dashboard/          # Widgets de dashboard
-│   │   └── integracoes/        # Cards de integração
-│   ├── lib/
-│   │   ├── supabase/           # Clientes Supabase (browser/server)
-│   │   ├── auth/               # Middleware e whitelist
-│   │   ├── integrations/       # SDKs de integrações externas
-│   │   ├── billing/            # Lógica Stripe
-│   │   └── pdf/                # Geração de documentos PDF
-│   ├── hooks/                  # React hooks customizados
-│   ├── types/                  # Tipos TypeScript globais
-│   └── utils/                  # Funções utilitárias
-├── database/
-│   ├── migrations/             # SQL migrations versionadas
-│   └── seeds/                  # Dados iniciais de desenvolvimento
-├── public/
-│   ├── logos/                  # Logos Hï Tech (SVG)
-│   └── patterns/               # Padrões decorativos (SVG)
-└── docs/                       # Documentação técnica adicional
+```txt
+http://localhost:3000
 ```
 
----
-
-## Segurança
-
-- Row Level Security (RLS) habilitado em todas as tabelas
-- Tokens OAuth armazenados criptografados (`pgcrypto`)
-- Headers de segurança configurados no `next.config.ts`
-- Trilha de auditoria em `audit_logs`
-- Separação de clientes Supabase (anon / service role)
-
----
-
-## Comandos Úteis
+## Scripts úteis
 
 ```bash
-npm run dev          # Servidor de desenvolvimento
-npm run build        # Build de produção
-npm run type-check   # Verificação de tipos TypeScript
-npm run lint         # ESLint
+npm run dev
+npm run build
+npm run type-check
+npm run lint
 ```
 
----
+## Observações técnicas
+
+- A autenticação usa magic link pelo Supabase.
+- O cliente normal do Supabase é usado para sessão e leitura protegida por RLS.
+- O `SUPABASE_SERVICE_ROLE_KEY` deve ser usado apenas em rotas server-side que realmente precisam de privilégio elevado.
+- As políticas de RLS foram ajustadas para evitar recursão entre `profiles` e `organizations`.
+- Algumas integrações ainda são planejadas e podem aparecer como estrutura inicial no código.
+
+## Roadmap
+
+- Finalizar módulos reais de documentos e wiki.
+- Integrar Google OAuth.
+- Conectar Google Calendar e Google Drive.
+- Implementar Stripe para planos pagos.
+- Melhorar permissões administrativas por cargo.
+- Adicionar testes e checks de CI.
 
 ## Licença
 
-Propriedade da **Hï Tech Empresa Júnior**. Uso restrito.
+Projeto privado/educacional em desenvolvimento. Todos os direitos reservados ao autor.

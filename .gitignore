@@ -9,7 +9,7 @@ out/
 build/
 dist/
 
-# Environment variables Ñ NUNCA commitar!
+# Environment variables - nunca commitar!
 .env
 .env.local
 .env.*.local
@@ -34,5 +34,7 @@ next-env.d.ts
 
 # Misc
 .vercel
+.vercel/output/
 .turbo
 coverage/
+supabase/.temp/
